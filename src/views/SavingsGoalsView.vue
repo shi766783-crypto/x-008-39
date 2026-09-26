@@ -39,6 +39,22 @@
           <input v-model.number="g.depositInput" :placeholder="`存入金额，当前 ¥${money(g.savedAmount)}`" type="number" min="0.01" step="0.01" required />
           <button class="btn btn-primary" type="submit">存入</button>
         </form>
+        <div class="deposit-history">
+          <div class="deposit-history-head">
+            <span>存入明细</span>
+            <em>共 {{ g.deposits.length }} 笔</em>
+          </div>
+          <div class="deposit-list" v-if="g.deposits.length">
+            <div v-for="d in g.deposits" :key="d.id" class="deposit-item">
+              <div class="deposit-info">
+                <b class="deposit-amount">+¥{{ money(d.amount) }}</b>
+                <span class="deposit-time">{{ depositLabel(d) }}</span>
+              </div>
+              <button class="link-btn danger" @click="removeDeposit(g, d)">删除</button>
+            </div>
+          </div>
+          <div v-else class="deposit-empty">暂无存入记录，完成第一笔存入后这里会显示明细。</div>
+        </div>
       </div>
     </div>
 
@@ -77,7 +93,7 @@
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useStore, refreshKeys, controllersApi } from '../data/store.js'
-import { money } from '../core/utils.js'
+import { money, formatDateTime } from '../core/utils.js'
 import ProgressRing from '../components/ProgressRing.vue'
 import Modal from '../components/Modal.vue'
 
@@ -87,6 +103,11 @@ const { savingsGoal: goalApi } = controllersApi
 const modalOpen = ref(false)
 const form = reactive(goalApi.emptyGoalForm())
 
+const depositLabel = (d) => {
+  const time = Number(d.createdAt) > 0 ? formatDateTime(d.createdAt) : ''
+  return d.kind === 'initial' ? `初始已存${time ? ' · ' + time : ''}` : time
+}
+
 const goals = computed(() =>
   store.goals.map((g) => {
     const leftDays = Math.max(0, Math.ceil((new Date(g.targetDate + 'T23:59:59') - new Date()) / 86400000))
@@ -94,6 +115,7 @@ const goals = computed(() =>
     const percent = g.targetAmount > 0 ? Math.round((g.savedAmount / g.targetAmount) * 100) : 0
     return {
       ...g,
+      deposits: [...(g.deposits || [])].sort((a, b) => Number(b.createdAt) - Number(a.createdAt)),
       leftDays,
       remainingAmount,
       percent,
@@ -131,6 +153,14 @@ const addSaving = (g) => {
 
 const remove = (g) => {
   if (goalApi.removeGoal(g.id)) refreshKeys('goals')
+}
+
+const removeDeposit = (g, d) => {
+  if (goalApi.removeGoalSaving(g.id, d.id)) {
+    refreshKeys('goals')
+    controllersApi.achievement.updateAchievements()
+    refreshKeys('achievements')
+  }
 }
 </script>
 
@@ -227,5 +257,57 @@ const remove = (g) => {
   background: var(--bg-elevated);
   color: var(--text-primary);
   min-width: 0;
+}
+.deposit-history {
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}
+.deposit-history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.deposit-history-head em {
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+.deposit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.deposit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+.deposit-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.deposit-amount {
+  font-size: 13px;
+  color: var(--income);
+}
+.deposit-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.deposit-empty {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 2px;
 }
 </style>

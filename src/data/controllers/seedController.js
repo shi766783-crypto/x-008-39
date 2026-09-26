@@ -10,6 +10,23 @@ import { saveUser } from './userController.js'
 let idCounter = 1
 const genId = (prefix) => `${prefix}-${idCounter++}`
 
+const daysAgoTs = (days, hour = 10) => {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  d.setHours(hour, 0, 0, 0)
+  return d.getTime()
+}
+
+function goalDeposits(rows) {
+  return rows.map(([amount, daysAgo, hour], i) => ({
+    id: genId('gdep'),
+    kind: 'saving',
+    amount,
+    note: '',
+    createdAt: daysAgoTs(daysAgo, hour) - i
+  }))
+}
+
 function dateDaysAgo(n) {
   const d = new Date()
   d.setDate(d.getDate() - n)
@@ -96,7 +113,14 @@ export function seedDemoData() {
       type: 'savings',
       targetAmount: 50000,
       targetDate: `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-01`,
-      savedAmount: 16800
+      savedAmount: 16800,
+      deposits: goalDeposits([
+        [5000, 90, 9],
+        [4000, 62, 14],
+        [3000, 40, 10],
+        [3000, 20, 19],
+        [1800, 5, 20]
+      ])
     },
     {
       id: genId('goal'),
@@ -104,7 +128,12 @@ export function seedDemoData() {
       type: 'savings',
       targetAmount: 12000,
       targetDate: todayStr(120),
-      savedAmount: 3600
+      savedAmount: 3600,
+      deposits: goalDeposits([
+        [2000, 45, 11],
+        [1000, 25, 15],
+        [600, 8, 21]
+      ])
     }
   ])
 
