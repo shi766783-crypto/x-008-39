@@ -12,7 +12,10 @@
       <div v-for="g in goals" :key="g.id" class="card goal-card">
         <div class="goal-head">
           <h3>{{ g.name }}</h3>
-          <button class="link-btn danger" @click="remove(g)">删除</button>
+          <div class="goal-actions">
+            <button class="link-btn" @click="openHistory(g)">明细</button>
+            <button class="link-btn danger" @click="remove(g)">删除</button>
+          </div>
         </div>
         <div class="goal-ring-row">
           <div class="ring-wrap">
@@ -71,13 +74,30 @@
           <button type="submit" class="btn btn-primary" form="goal-form">创建目标</button>
         </template>
     </Modal>
+
+    <Modal :title="`「${historyGoal.name}」存入明细`" v-if="historyGoal" @close="historyGoalId = null">
+      <p class="history-summary" v-if="historyList.length">共 {{ historyList.length }} 笔，累计存入 ¥{{ money(historyTotal) }}</p>
+      <p class="history-empty" v-else>还没有存入记录，存入后会在这里按时间列出。</p>
+      <ul class="history-list" v-if="historyList.length">
+        <li v-for="d in historyList" :key="d.id">
+          <div class="history-info">
+            <b>+¥{{ money(d.amount) }}</b>
+            <span>{{ formatDateTime(d.createdAt) }}</span>
+          </div>
+          <button class="link-btn danger" @click="removeDeposit(d)">删除</button>
+        </li>
+      </ul>
+      <template #footer>
+        <button type="button" class="btn" @click="historyGoalId = null">关闭</button>
+      </template>
+    </Modal>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref, computed } from 'vue'
 import { useStore, refreshKeys, controllersApi } from '../data/store.js'
-import { money } from '../core/utils.js'
+import { money, formatDateTime } from '../core/utils.js'
 import ProgressRing from '../components/ProgressRing.vue'
 import Modal from '../components/Modal.vue'
 
@@ -86,6 +106,7 @@ const { savingsGoal: goalApi } = controllersApi
 
 const modalOpen = ref(false)
 const form = reactive(goalApi.emptyGoalForm())
+const historyGoalId = ref(null)
 
 const goals = computed(() =>
   store.goals.map((g) => {
@@ -124,13 +145,33 @@ const addSaving = (g) => {
   const amount = Number(g.depositInput)
   if (!amount || amount <= 0) return
   goalApi.addGoalSaving(g.id, amount)
-  refreshKeys('goals')
+  g.depositInput = ''
+  refreshKeys('goals', 'goalDeposits')
   controllersApi.achievement.updateAchievements()
   refreshKeys('achievements')
 }
 
 const remove = (g) => {
-  if (goalApi.removeGoal(g.id)) refreshKeys('goals')
+  if (goalApi.removeGoal(g.id)) refreshKeys('goals', 'goalDeposits')
+}
+
+const historyGoal = computed(() => goals.value.find((g) => g.id === historyGoalId.value) || null)
+
+const historyList = computed(() =>
+  store.goalDeposits
+    .filter((d) => d.goalId === historyGoalId.value)
+    .slice()
+    .sort((a, b) => b.createdAt - a.createdAt)
+)
+
+const historyTotal = computed(() => historyList.value.reduce((sum, d) => sum + d.amount, 0))
+
+const openHistory = (g) => {
+  historyGoalId.value = g.id
+}
+
+const removeDeposit = (d) => {
+  if (goalApi.removeGoalDeposit(d.goalId, d.id)) refreshKeys('goals', 'goalDeposits')
 }
 </script>
 
@@ -149,6 +190,10 @@ const remove = (g) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+.goal-actions {
+  display: flex;
+  gap: 12px;
 }
 .goal-head h3 {
   margin: 0;
@@ -227,5 +272,47 @@ const remove = (g) => {
   background: var(--bg-elevated);
   color: var(--text-primary);
   min-width: 0;
+}
+.history-summary {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.history-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 18px 0;
+}
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.history-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+.history-list li:last-child {
+  border-bottom: none;
+}
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.history-info b {
+  color: var(--income);
+  font-size: 14px;
+}
+.history-info span {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 </style>

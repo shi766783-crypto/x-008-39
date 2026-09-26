@@ -4,7 +4,7 @@ import { todayStr, toDateStr } from '../../core/utils.js'
 import { loadAccounts, saveAccounts } from './accountController.js'
 import { saveTransactions } from './transactionController.js'
 import { saveBudgets } from './budgetController.js'
-import { saveGoals } from './savingsGoalController.js'
+import { saveGoals, saveGoalDeposits } from './savingsGoalController.js'
 import { saveUser } from './userController.js'
 
 let idCounter = 1
@@ -89,23 +89,34 @@ export function seedDemoData() {
 
   const target = new Date()
   target.setMonth(target.getMonth() + 10)
-  saveGoals([
-    {
-      id: genId('goal'),
-      name: '家庭应急金',
-      type: 'savings',
-      targetAmount: 50000,
-      targetDate: `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-01`,
-      savedAmount: 16800
-    },
-    {
-      id: genId('goal'),
-      name: '旅行基金',
-      type: 'savings',
-      targetAmount: 12000,
-      targetDate: todayStr(120),
-      savedAmount: 3600
-    }
+  const emergencyGoal = {
+    id: genId('goal'),
+    name: '家庭应急金',
+    type: 'savings',
+    targetAmount: 50000,
+    targetDate: `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-01`,
+    savedAmount: 16800
+  }
+  const travelGoal = {
+    id: genId('goal'),
+    name: '旅行基金',
+    type: 'savings',
+    targetAmount: 12000,
+    targetDate: todayStr(120),
+    savedAmount: 3600
+  }
+  saveGoals([emergencyGoal, travelGoal])
+
+  const tsDaysAgo = (n) => Date.now() - n * 86400000
+  const dep = (goalId, amount, daysAgo) => ({ id: genId('dep'), goalId, amount, createdAt: tsDaysAgo(daysAgo) })
+  saveGoalDeposits([
+    dep(emergencyGoal.id, 5000, 150),
+    dep(emergencyGoal.id, 6000, 120),
+    dep(emergencyGoal.id, 3800, 90),
+    dep(emergencyGoal.id, 2000, 30),
+    dep(travelGoal.id, 1200, 60),
+    dep(travelGoal.id, 1500, 40),
+    dep(travelGoal.id, 900, 15)
   ])
 
   saveUser({ name: '我的家庭', createdAt: new Date().toISOString(), currency: 'CNY' })

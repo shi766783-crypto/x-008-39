@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   transactions: 'ffm.transactions',
   budgets: 'ffm.budgets',
   savingsGoals: 'ffm.savingsGoals',
+  goalDeposits: 'ffm.goalDeposits',
   user: 'ffm.user',
   achievements: 'ffm.achievements',
   points: 'ffm.points',

@@ -41,6 +41,14 @@ export function money(value) {
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+export function formatDateTime(ts) {
+  const d = new Date(ts)
+  const date = toDateStr(d)
+  const hh = String(d.getHours()).padStart(2, '0')
+  const mm = String(d.getMinutes()).padStart(2, '0')
+  return `${date} ${hh}:${mm}`
+}
+
 export function daysBetween(dateStrA, dateStrB) {
   const a = new Date(`${dateStrA}T00:00:00`)
   const b = new Date(`${dateStrB}T00:00:00`)
